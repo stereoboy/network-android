@@ -49,7 +49,11 @@ Java_com_crazinglab_androidnetwork_MainActivity_initThread(
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#define MAX 80
+
+#include <chrono>
+#include <thread>
+
+#define MAX 512
 #define PORT 8080
 
 // Function designed for chat between client and server.
@@ -62,17 +66,21 @@ void func(int connfd)
         bzero(buff, MAX);
 
         // read the message from client and copy it in buffer
-        read(connfd, buff, sizeof(buff));
+        if (read(connfd, buff, sizeof(buff)) <= 0) {
+            LOGI("Connection Cloased");
+            break;
+        }
         // print buffer which contains the client contents
         LOGI("From client: %s\t To client : ", buff);
-        bzero(buff, MAX);
+        //bzero(buff, MAX);
         n = 0;
         // copy server message in the buffer
         //while ((buff[n++] = getchar()) != '\n')
         //    ;
-        sprintf(buff, "test message from server\n");
+        //sprintf(buff, "test message from server\n");
 
         // and send that buffer to client
+        std::this_thread::sleep_for(std::chrono::milliseconds(15));
         write(connfd, buff, sizeof(buff));
 
         // if msg contains "Exit" then server exit and chat ended.
@@ -86,7 +94,7 @@ void func(int connfd)
 // Driver function
 static void *server_thread(void *userdata)
 {
-    int sockfd, connfd;
+    int sockfd = -1, connfd = -1;
     socklen_t len;
     struct sockaddr_in servaddr, cli;
 
@@ -186,6 +194,7 @@ static void *server_thread(void *userdata)
     func(connfd);
 
     // After chatting close the socket
-    close(sockfd);
+    if (connfd > 0) close(connfd);
+    if (sockfd > 0) close(sockfd);
     return nullptr;
 }
